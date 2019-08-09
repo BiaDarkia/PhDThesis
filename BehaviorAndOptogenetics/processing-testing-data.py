@@ -105,10 +105,12 @@ def append_all(subject, date, condition, opto, group, left, right, omit, rt_left
         low.append(left)
         rt_high.append(np.mean(rt_right))
         rt_low.append(np.mean(rt_left))
-        
+    
+    # In addition, also calculate and store the overall mean reaction time
+    rt.append((np.mean(np.concatenate((rt_left, rt_right)))))  
     omitted.append(omit)
 
-# Initiate empty lists and an empty dictionary to append/use later on
+# Initialize empty lists and an empty dictionary to append/use later on
 subjects = []
 dates = []
 conditions = []
@@ -117,6 +119,7 @@ groups = []
 high = []
 low = []
 omitted = []
+rt = []
 rt_high = []
 rt_low = []
 cache = dict()   
@@ -266,9 +269,11 @@ rt_low = np.nan_to_num(rt_low)
 # calculate the total number of trials and the 'performance',
 # i.e. the number of high benefit/high cost/high cost-high benefit 
 # lever presses as compared to the overall number of trials that
-# were not omitted
-data = pd.DataFrame({"subject": subjects, "condition": conditions, "opto": optogenetics, "group": groups, "high": high, "low": low, "omitted": omitted, "rt_high": rt_high, "rt_low": rt_low})
-data = data.groupby(['subject', 'condition', 'opto', 'group'], as_index=False).agg({'high': np.sum, 'low': np.sum, 'omitted': np.sum, 'rt_high': np.mean, 'rt_low': np.mean})
+# were not omitted as well as the difference in reaction times on
+# high benefit/high cost/high benefit-high cost as compared to
+# low benefit/low cost/low benefit-low cost choices
+data = pd.DataFrame({"subject": subjects, "condition": conditions, "opto": optogenetics, "group": groups, "high": high, "low": low, "omitted": omitted, "rt": rt, "rt_high": rt_high, "rt_low": rt_low})
+data = data.groupby(['subject', 'condition', 'opto', 'group'], as_index=False).agg({'high': np.sum, 'low': np.sum, 'omitted': np.sum, 'rt': np.mean, 'rt_high': np.mean, 'rt_low': np.mean})
 data['total'] = data['high'] + data['low'] + data['omitted']
 data['performance'] = (data['high'] / (data['low'] + data['high'])) * 100
 data['performance'].fillna(0, inplace=True)
@@ -294,7 +299,7 @@ data.to_csv("./tidy_data.csv", index = False)
 # consecutive days of testing for each condition, introduce a variable 
 # day that codes data from day 1 as "1", from day 2 as "2" and from day 3 
 # as "3". Drop the date column and store the data as ./tidy_data_day.csv
-data_days = pd.DataFrame({"subject": subjects, "condition": conditions, "opto": optogenetics, "group": groups, "high": high, "low": low, "omitted": omitted, "rt_high": rt_high, "rt_low": rt_low, "date": dates})
+data_days = pd.DataFrame({"subject": subjects, "condition": conditions, "opto": optogenetics, "group": groups, "high": high, "low": low, "omitted": omitted, 'rt': np.mean, "rt_high": rt_high, "rt_low": rt_low, "date": dates})
 data_days = data_days.sort_values(by=['subject','date'])
 data_days['performance'] = (data_days['high'] / (data_days['low'] + data_days['high'])) * 100
 data_days['performance'].fillna(0, inplace=True)
