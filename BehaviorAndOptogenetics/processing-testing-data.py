@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-"""Script to extract information for benefit-benefit, cost-cost 
-and cost-benefit decision-making condition from raw data"""
+"""Script to extract information recorded during behavioral testing on the benefit-benefit, 
+cost-cost and cost-benefit decision-making paradigm from the raw data"""
 
 # Import statements
 import os
