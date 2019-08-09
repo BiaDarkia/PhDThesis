@@ -171,7 +171,7 @@ def append_all_lp(subject, date, condition, group, press):
         
     presses.append(press)
 
-# Initiate empty lists and an empty dictionary to append/use later on 
+# Initialize empty lists and an empty dictionary to append/use later on 
 subjects = []
 dates = []
 conditions = []
