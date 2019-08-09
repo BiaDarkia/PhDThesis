@@ -78,7 +78,7 @@ def append_all(subject, dilution, group, left, right, omit):
         
         omitted.append(omit)
 
-# Initiate empty lists to append later on
+# Initialize empty lists to append later on
 subjects = []
 dilutions = []
 groups = []
