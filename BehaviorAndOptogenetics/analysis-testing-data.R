@@ -22,31 +22,36 @@ data_long$omit_pct <- (data_long$omitted/data_long$total)*100
 
 # Initialize variables to store outputs from statistical tests
 posthoc_tests_output <- data.frame(arch = numeric(), condition = numeric(), variable = character(),
-    levene = numeric(), shapiro = numeric(), p_value = numeric(), effect_size = numeric(), stringsAsFactors=FALSE)
+    levene = numeric(), shapiro = numeric(), p_value = numeric(), effect_size = numeric(), 
+    wilcox = numeric(), wilcox_effect_size = numeric(), stringsAsFactors=FALSE)
 
 levenes = list()
 shapiro = list()
 
 anovas = list()
 ttests_within = list()
+wilcox_within = list()
 
 levenes_rt_diff = list()
 shapiro_rt_diff = list()
 
 anovas_rt_diff = list()
 ttests_rt_diff_within = list()
+wilcox_rt_diff_within = list()
 
 levenes_rt = list()
 shapiro_rt = list()
 
 anovas_rt = list()
 ttests_rt_within = list()
+wilcox_rt_within = list()
 
 levenes_omit = list()
 shapiro_omit = list()
 
 anovas_omit = list()
 ttests_omit_within = list()
+wilcox_omit_within = list()
 
 # Calculate ANOVAs using light ON versus OFF as within and injected virus as between animal factor
 for (c in c(1, 2, 3)) {
@@ -78,11 +83,15 @@ for (c in c(1, 2, 3)) {
                 
                 ttests_within = append(ttests_within, list(t.test(data_arch$performance[data_arch$opto=='0'], 
                     data_arch$performance[data_arch$opto=='1'], paired=TRUE)))
+                wilcox_within = append(wilcox_within, list(wilcox.test(data_arch$performance[data_arch$opto=='0'], 
+                    data_arch$performance[data_arch$opto=='1'], paired=TRUE)))
                 
                 levenes_rt_diff = append(levenes_rt_diff, list(leveneTest(rt_diff~as.factor(opto), data_arch)))
                 shapiro_rt_diff = append(shapiro_rt_diff, list(shapiro.test(data_arch$rt_diff[data_arch$opto=='0']-data_arch$rt_diff[data_arch$opto=='1'])))
                 
                 ttests_rt_diff_within = append(ttests_rt_diff_within, list(t.test(data_arch$rt_diff[data_arch$opto=='0'], 
+                    data_arch$rt_diff[data_arch$opto=='1'], paired=TRUE)))
+                wilcox_rt_diff_within = append(wilcox_rt_diff_within, list(wilcox.test(data_arch$rt_diff[data_arch$opto=='0'], 
                     data_arch$rt_diff[data_arch$opto=='1'], paired=TRUE)))
                 
                 levenes_rt = append(levenes_rt, list(leveneTest(rt~as.factor(opto), data_arch)))
@@ -90,40 +99,52 @@ for (c in c(1, 2, 3)) {
                 
                 ttests_rt_within = append(ttests_rt_within, list(t.test(data_arch$rt[data_arch$opto=='0'], 
                     data_arch$rt[data_arch$opto=='1'], paired=TRUE)))
+                wilcox_rt_within = append(wilcox_rt_within, list(wilcox.test(data_arch$rt[data_arch$opto=='0'], 
+                    data_arch$rt[data_arch$opto=='1'], paired=TRUE)))
                 
                 levenes_omit = append(levenes_omit, list(leveneTest(omit_pct~as.factor(opto), data_arch)))
                 shapiro_omit = append(shapiro_omit, list(shapiro.test(data_arch$omit_pct[data_arch$opto=='0']-data_arch$omit_pct[data_arch$opto=='1'])))
                 
                 ttests_omit_within = append(ttests_omit_within, list(t.test(data_arch$omit_pct[data_arch$opto=='0'], 
                     data_arch$omit_pct[data_arch$opto=='1'], paired=TRUE)))
+                wilcox_omit_within = append(wilcox_omit_within, list(wilcox.test(data_arch$omit_pct[data_arch$opto=='0'], 
+                    data_arch$omit_pct[data_arch$opto=='1'], paired=TRUE)))
                 
                 t = ttests_within[[length(ttests_within)]]$statistic
                 df = ttests_within[[length(ttests_within)]]$parameter
+                wp = wilcox_within[[length(wilcox_within)]]$p.value
+                eff = abs(qnorm(wp/2)/sqrt(nrow(data_arch)))
                 
                 posthoc_tests_output[nrow(posthoc_tests_output) + 1,] = list(a, c, 'p', 
                     levenes[[length(levenes)]]$`Pr(>F)`, shapiro[[length(shapiro)]]$p.value,
-                    ttests_within[[length(ttests_within)]]$p.value, sqrt(((t)^2)/(((t)^2)+df)))
+                    ttests_within[[length(ttests_within)]]$p.value, sqrt(((t)^2)/(((t)^2)+df)), wp, eff)
                 
                 t_rt_diff = ttests_rt_diff_within[[length(ttests_rt_diff_within)]]$statistic
                 df_rt_diff = ttests_rt_diff_within[[length(ttests_rt_diff_within)]]$parameter
+                wp_rt_diff = wilcox_rt_diff_within[[length(wilcox_rt_diff_within)]]$p.value
+                eff_rt_diff = abs(qnorm(wp_rt_diff/2)/sqrt(nrow(data_arch)))
                 
                 posthoc_tests_output[nrow(posthoc_tests_output) + 1,] = list(a, c, 'rt_diff', 
                     levenes_rt_diff[[length(levenes_rt_diff)]]$`Pr(>F)`, shapiro_rt_diff[[length(shapiro_rt_diff)]]$p.value,
-                    ttests_rt_diff_within[[length(ttests_rt_diff_within)]]$p.value, sqrt(((t_rt_diff)^2)/(((t_rt_diff)^2)+df_rt_diff)))
+                    ttests_rt_diff_within[[length(ttests_rt_diff_within)]]$p.value, sqrt(((t_rt_diff)^2)/(((t_rt_diff)^2)+df_rt_diff)), wp_rt_diff, eff_rt_diff)
                 
                 t_rt = ttests_rt_within[[length(ttests_rt_within)]]$statistic
                 df_rt = ttests_rt_within[[length(ttests_rt_within)]]$parameter
+                wp_rt = wilcox_rt_within[[length(wilcox_rt_within)]]$p.value
+                eff_rt = abs(qnorm(wp_rt/2)/sqrt(nrow(data_arch)))
                 
                 posthoc_tests_output[nrow(posthoc_tests_output) + 1,] = list(a, c, 'rt', 
                      levenes_rt[[length(levenes_rt)]]$`Pr(>F)`, shapiro_rt[[length(shapiro_rt)]]$p.value,
-                     ttests_rt_within[[length(ttests_rt_within)]]$p.value, sqrt(((t_rt)^2)/(((t_rt)^2)+df_rt)))
+                     ttests_rt_within[[length(ttests_rt_within)]]$p.value, sqrt(((t_rt)^2)/(((t_rt)^2)+df_rt)), wp_rt, eff_rt)
                 
                 t_omit = ttests_omit_within[[length(ttests_omit_within)]]$statistic
                 df_omit = ttests_omit_within[[length(ttests_omit_within)]]$parameter
+                wp_omit = wilcox_omit_within[[length(wilcox_omit_within)]]$p.value
+                eff_omit = abs(qnorm(wp_omit/2)/sqrt(nrow(data_arch)))
                 
                 posthoc_tests_output[nrow(posthoc_tests_output) + 1,] = list(a, c, 'o', 
                     levenes_omit[[length(levenes_omit)]]$`Pr(>F)`, shapiro_omit[[length(shapiro_omit)]]$p.value,
-                    ttests_omit_within[[length(ttests_omit_within)]]$p.value, sqrt(((t_omit)^2)/(((t_omit)^2)+df_omit)))
+                    ttests_omit_within[[length(ttests_omit_within)]]$p.value, sqrt(((t_omit)^2)/(((t_omit)^2)+df_omit)), wp_omit, eff_omit)
                 
        }
 }
@@ -264,7 +285,7 @@ axis(side=2, at=seq(0,100,10), labels=labels_pct, las=1, lwd=5, cex.axis=2.2, fo
 text(2, 0.5, labels="n=12", cex=2.2)
 dev.off()
 
-labels_rt <- c("0","","2","","6","","2","","8")
+labels_rt <- c("0","","2","","4","","6","","8")
 
 # Interaction plot of the overall mean reaction time on all trials that were not omitted
 # for each archaerhodopsin and  each control animal for all three decision-making paradigms
