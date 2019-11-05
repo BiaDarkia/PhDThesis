@@ -15,6 +15,25 @@ function mtstim_plot(file, sweep, stim, ylim1, ylim2, lead, artifact_template, i
 [d,si,h] = abfload(file);
 [p,q,r] = size(d);
 
+% Plot data of a 2-second-long segment of activity at the end of the sweep between delivery of thalamic stimulations
+data_long = d(2/(si/1e6):4/(si/1e6)-1, 1, sweep);
+
+fig_name = strrep(strrep(file,'mtstim/',''),'.abf','');
+
+data_long_fig = figure('visible','off','PaperPosition',[0 0 8 4]);
+plot(1:500000, data_long)
+hold on
+xlim([0, 2/(si/1e6)])
+xlabel('Time (s)')
+xticks([0 0.5 1 1.5 2]./(si/1e6))
+xticklabels({'0', '0.5', '1', '1.5', '2'})
+ylabel('Activity (mV)')
+hold off
+
+% Save the plot
+print(data_long_fig, strcat('figures/figure_', fig_name, '_long_', int2str(sweep)), '-dtiff', '-r300')
+
+
 % Reshape the data into segments such that there is data of one
 % stimulation along the X-axis, stimulations from one sweep along
 % the Y axis, and data from sweeps along the Z-axis
@@ -41,7 +60,6 @@ end
 
 % Determine locations for x-ticks and figure name
 tick_locs = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]./(si/1e6);
-fig_name = strrep(strrep(file,'mtstim/',''),'.abf','');
 
 % Plot the data and indicate each spike location with a short black line
 mtstim_fig = figure('visible','off','PaperPosition',[0 0 5 4]);
