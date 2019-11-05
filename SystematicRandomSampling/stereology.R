@@ -22,10 +22,10 @@ png('./estimated_total.png', width = 800, height = 600)
 plot(ggplot(data_long, aes(marker, estimate)) + geom_point(size = 6) + 
     theme(axis.title.x = element_blank(), axis.title.y = element_text(colour = "black",
     size = "28", face = "bold", margin = margin(t = 0, r = 20, b = 0, l = 0)),
-    axis.text = element_text(colour = "black", size = "24")) + 
+    axis.text = element_text(colour = "black", size = "20")) + 
     ylab("Estimated Total") + scale_x_discrete(breaks=c("MAP2", "RGS14", "HT3aR"), 
     limits=c("MAP2", "RGS14", "HT3aR"), labels = c("Pyramidal\nNeurons (MAP2)", 
-    "IT Neurons\n(RGS14)", "Layer 1 Inhibitory\nInterneurons (5HT3aR)")) + 
+    "Corticostriatal\nNeurons (RGS14)", "Layer 1 Inhibitory\nInterneurons (5HT3aR)")) + 
     scale_y_continuous(limits = c(0, 32000)) +
     stat_summary(fun.data_long=mean_se, geom="errorbar", color="red", width=0.3, size=2) + 
     stat_summary(fun.y=mean, geom="point", color="red", size=6))
