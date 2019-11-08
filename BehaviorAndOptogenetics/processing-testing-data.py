@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-"""Script to extract information recorded during behavioral testing on the benefit-benefit, 
-cost-cost and cost-benefit decision-making paradigm from the raw data"""
+"""Script to extract information for benefit-benefit, cost-cost 
+and cost-benefit decision-making condition from raw data"""
 
 # Import statements
 import os
@@ -107,7 +107,7 @@ def append_all(subject, date, condition, opto, group, left, right, omit, rt_left
         rt_low.append(np.mean(rt_left))
     
     # In addition, also calculate and store the overall mean reaction time
-    rt.append((np.mean(np.concatenate((rt_left, rt_right)))))  
+    rt.append((np.mean(np.hstack([rt_left, rt_right]))))  
     omitted.append(omit)
 
 # Initialize empty lists and an empty dictionary to append/use later on
@@ -293,14 +293,16 @@ data.to_csv("./tidy_data.csv", index = False)
 # then on the cost-cost and last on the cost-benefit decision-making paradigm
 # For each paradigm animals performed 20 trials on the opto = "0" and
 # 20 trials on the opto = "1" condition on three consecutive days.
-# Calculate the 'performance', i.e. the number of high benefit/high cost/
+# Calculate the total number of trials, difference in reaction times,
+# and 'performance', i.e. the number of high benefit/high cost/
 # high cost-high benefit lever presses as compared to the overall number of 
 # trials that were not omitted. To discriminate data from the three
 # consecutive days of testing for each condition, introduce a variable 
 # day that codes data from day 1 as "1", from day 2 as "2" and from day 3 
 # as "3". Drop the date column and store the data as ./tidy_data_day.csv
-data_days = pd.DataFrame({"subject": subjects, "condition": conditions, "opto": optogenetics, "group": groups, "high": high, "low": low, "omitted": omitted, 'rt': np.mean, "rt_high": rt_high, "rt_low": rt_low, "date": dates})
+data_days = pd.DataFrame({"subject": subjects, "condition": conditions, "opto": optogenetics, "group": groups, "high": high, "low": low, "omitted": omitted, 'rt': rt, "rt_high": rt_high, "rt_low": rt_low, "date": dates})
 data_days = data_days.sort_values(by=['subject','date'])
+data_days['total'] = data_days['high'] + data_days['low'] + data_days['omitted']
 data_days['performance'] = (data_days['high'] / (data_days['low'] + data_days['high'])) * 100
 data_days['performance'].fillna(0, inplace=True)
 data_days['rt_diff'] = data_days['rt_high'] - data_days['rt_low']
