@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 
-"""Script to extract information from lever press training and
-from behavioral training on the benefit-benefit, cost-cost 
-and cost-benefit decision-making condition from raw data"""
-
-# Import statements
 import os
 import re
 import warnings
@@ -17,7 +12,7 @@ import pandas as pd
 import datetime
 
 # Sometimes animals manage to press the lever a second time when it retracts.
-# In this case a file may contain data on more than 20 trials. If this is 
+# In this case a file may contain data on more than 40 trials. If this is 
 # the case, this function determines and returns the number of left, right 
 # and omitted lever presses as well as reaction times for left and right
 # lever presses. First, any second time lever presses are excluded.
@@ -25,9 +20,10 @@ import datetime
 # than from the time of lever retraction this can easily be done by
 # excluding any lever presses with a reaction time shorter than 10 secs.
 # However, if a trial is omitted the reaction time is zero and, hence,
-# these trials need to be kept. After cleaning up the data the first 20 trials
-# are selected and the number of left, right and omitted lever presses as well
-# as the corresponding reaction times are determined and returned
+# these trials need to be kept. After cleaning up the data the data is split
+# into the first and last 20 trials and the number of left, right and
+# omitted lever presses as well as the corresponding reaction times are 
+# determined for both blocks and returned
 def count_lever_presses(text_data):
     if (int(float(re.sub(r'P:|\s', '', text_data[26]))) + int(float(re.sub(r'Q:|\s', '', text_data[27])))) == 0:
         return 0, 0, 20, 0, 0, 0, 0, 20, 0, 0
@@ -51,6 +47,29 @@ def count_lever_presses(text_data):
         rt_right_block2 = reaction_time_tidy[20:40][lever_presses_tidy[20:40] == 2.0]
     
         return lever_presses_count_block1[1], lever_presses_count_block1[2], lever_presses_count_block1[0], rt_left_block1, rt_right_block1, lever_presses_count_block2[1], lever_presses_count_block2[2], lever_presses_count_block2[0], rt_left_block2, rt_right_block2
+
+# For the cost-benefit decision-making paradigm animals are presented with two 
+# blocks of 20 trials on the first 3 days to determine the dilution of sweetened
+# condensed milk for each individual rat. In this case, a file may contain data
+# on more than 20 trials. As descried above, this function cleans up the data,
+# selects the first 20 trials and the number of left, right and omitted lever 
+# presses as well as the corresponding reaction times are determined and returned
+def count_lever_presses_short(text_data):        
+    lever_data = re.sub(r'\s+[0-9]+:\s+|\s+', ' ', " ".join(text_data[38:])).split("D:")
+            
+    lever_presses = np.array(lever_data[0].strip().split(" "), dtype='float32')
+    reaction_time = np.array(lever_data[1].strip().split(" "), dtype='float32')
+            
+    lever_presses_tidy = lever_presses[np.logical_or(reaction_time == 0.0, np.logical_and(reaction_time >=10.0, reaction_time <= 20.0))]
+    reaction_time_tidy = reaction_time[np.logical_or(reaction_time == 0.0, np.logical_and(reaction_time >=10.0, reaction_time <= 20.0))]
+
+    reaction_time_tidy[np.logical_and(reaction_time_tidy >=10.0, reaction_time_tidy <= 20.0)] -= 10
+
+    lever_presses_count = np.bincount(lever_presses_tidy.astype(int)[0:20], minlength = 3)
+    rt_left = reaction_time_tidy[0:20][lever_presses_tidy[0:20] == 1.0]
+    rt_right = reaction_time_tidy[0:20][lever_presses_tidy[0:20] == 2.0]
+    
+    return lever_presses_count[1], lever_presses_count[2], lever_presses_count[0], rt_left, rt_right
 
 # For the case that a file contains excatly 20 trials, this function will
 # extracts the reaction time for lever presses on the left or right lever
@@ -106,7 +125,8 @@ def append_all(subject, date, condition, block, group, left, right, omit, rt_lef
         low.append(left)
         rt_high.append(np.mean(rt_right))
         rt_low.append(np.mean(rt_left))
-        
+    
+    rt.append((np.mean(np.hstack([rt_left, rt_right]))))    
     omitted.append(omit)
 
 # For the cost-benefit decision-making paradigm,
@@ -117,11 +137,12 @@ def append_all(subject, date, condition, block, group, left, right, omit, rt_lef
 # number of presses on the left or right lever depending on the group of the 
 # subject, i.e. if the high cost-high benefit lever was the left or right lever 
 # for that specific animal. The same holds true for the reaction time.
-def append_all_cb(subject, date, condition, group, left, right, omit):
+def append_all_cb(subject, date, condition, block, group, left, right, omit, rt_left, rt_right):
     
     subjects_cb.append(subject)
     dates_cb.append(date)
     conditions_cb.append(condition)
+    blocks_cb.append(block)
 
     if group == "LL":
         groups_cb.append(1)
@@ -140,10 +161,15 @@ def append_all_cb(subject, date, condition, group, left, right, omit):
     if groups_cb[-1] == 1:
         high_cb.append(left)
         low_cb.append(right)
+        rt_high_cb.append(np.mean(rt_left))
+        rt_low_cb.append(np.mean(rt_right))
     if groups_cb[-1] == 2:
         high_cb.append(right)
         low_cb.append(left)
-        
+        rt_high_cb.append(np.mean(rt_right))
+        rt_low_cb.append(np.mean(rt_left))
+    
+    rt_cb.append((np.mean(np.hstack([rt_left, rt_right]))))    
     omitted_cb.append(omit)
 
 # For l,ever press training, store the subject ID, the date, 
@@ -171,7 +197,7 @@ def append_all_lp(subject, date, condition, group, press):
         
     presses.append(press)
 
-# Initialize empty lists and an empty dictionary to append/use later on 
+# Initiate empty lists and an empty dictionary to append/use later on 
 subjects = []
 dates = []
 conditions = []
@@ -182,14 +208,19 @@ low = []
 omitted = []
 rt_high = []
 rt_low = []
+rt = []
 
 subjects_cb = []
 dates_cb = []
 conditions_cb = []
+blocks_cb = []
 groups_cb = []
 high_cb = []
 low_cb = []
 omitted_cb = []
+rt_high_cb = []
+rt_low_cb = []
+rt_cb = []
 
 subjects_lp = []
 dates_lp = []
@@ -254,25 +285,41 @@ for file in os.listdir(path):
         # the function count_lever_presses and use append_all to add the
         # extracted data to lists of previously extracted data
         if condition in [1, 2]:
-            l1, r1, o1, rl1, rr1, l2, r2, o2, rl2, rr2  = count_lever_presses(raw_data)
+            l1, r1, o1, rtl1, rtr1, l2, r2, o2, rtl2, rtr2  = count_lever_presses(raw_data)
             
             block = 0
-            append_all(subject, date, condition, block, group, l1, r1, o1, rl1, rr1)
+            append_all(subject, date, condition, block, group, l1, r1, o1, rtl1, rtr1)
             
             block = 1
-            append_all(subject, date, condition, block, group, l2, r2, o2, rl2, rr2)
+            append_all(subject, date, condition, block, group, l2, r2, o2, rtl2, rtr2)
         
         # If the condition is CB extract left, right and omitted lever presses
-        # directly from the data and append the information using append all.
-        # Information on lever presses is not actually used in later data
-        # analysis and, hence, I did not account for occurrences when animals
-        # manage to press the lever a second time while it retracts
+        # directly from the data for first and last 20 trials each day
+        # and append the information using the append_all_cb function
         elif condition == 3:
             left = int(float(re.sub(r'P:|\s', '', raw_data[26])))
             right = int(float(re.sub(r'Q:|\s', '', raw_data[27])))        
             omit = int(float(re.sub(r'R:|\s', '', raw_data[28])))
             
-            append_all_cb(subject, date, condition, group, left, right, omit)
+            block = "N/A"
+            total = left + right + omit
+            
+            if (total >= 40):
+                l1, r1, o1, rtl1, rtr1, l2, r2, o2, rtl2, rtr2  = count_lever_presses(raw_data)
+
+                block = 0
+                append_all_cb(subject, date, condition, block, group, l1, r1, o1, rtl1, rtr1)
+                
+                block = 1
+                append_all_cb(subject, date, condition, block, group, l2, r2, o2, rtl2, rtr2)
+                
+            elif (total == 20):
+                rt_left, rt_right = extract_reaction_time(raw_data)
+                append_all_cb(subject, date, condition, block, group, left, right, omit, rt_left, rt_right)
+            
+            else:
+                left, right, omit, rt_left, rt_right = count_lever_presses_short(raw_data)
+                append_all_cb(subject, date, condition, block, group, left, right, omit, rt_left, rt_right)
         
         # If the condition is LP-LL or LP-RL extract and store the number of
         # lever presses
@@ -290,7 +337,7 @@ rt_low = np.nan_to_num(rt_low)
 # that were not omitted as well as the difference in reaction times on
 # high benefit/high cost/high benefit-high cost as compared to
 # low benefit/low cost/low benefit-low cost choices
-data = pd.DataFrame({"subject": subjects, "date": dates, "condition": conditions, "block": blocks, "group": groups, "high": high, "low": low, "omitted": omitted, "rt_high": rt_high, "rt_low": rt_low})
+data = pd.DataFrame({"subject": subjects, "date": dates, "condition": conditions, "block": blocks, "group": groups, "high": high, "low": low, "omitted": omitted, "rt": rt, "rt_high": rt_high, "rt_low": rt_low})
 data['performance'] = (data['high'] / (data['low'] + data['high'])) * 100
 data['performance'].fillna(0, inplace=True)
 data['rt_diff'] = data['rt_high'] - data['rt_low']
@@ -322,8 +369,29 @@ data_lp.to_csv("./tidy_data_training_lp.csv", index = False)
 # Store data from the CB-DM condition in a pandas data frame,
 # calculate the 'performance', i.e. the number of high benefit/high cost/
 # high cost-high benefit lever presses as compared to the overall number 
-# of trials that were not omitted, and store the data in a csv file
-data_cb = pd.DataFrame({"subject": subjects_cb, "date": dates_cb, "condition": conditions_cb, "group": groups_cb, "high": high_cb, "low": low_cb, "omitted": omitted_cb})
+# of trials that were not omitted, and the difference in reaction times on
+# high benefit/high cost/high benefit-high cost as compared to
+# low benefit/low cost/low benefit-low cost choices, 
+# and store the data in a csv file
+data_cb = pd.DataFrame({"subject": subjects_cb, "date": dates_cb, "condition": conditions_cb, "block": blocks_cb, "group": groups_cb, "high": high_cb, "low": low_cb, "omitted": omitted_cb, "rt": rt_cb, "rt_high": rt_high_cb, "rt_low": rt_low_cb})
 data_cb['performance'] = (data_cb['high'] / (data_cb['low'] + data_cb['high'])) * 100
 data_cb['performance'].fillna(0, inplace=True)
+data_cb['rt_diff'] = data_cb['rt_high'] - data_cb['rt_low']
+
+# Based on the date calculate the day of behavioral training and store it in
+# a variable day that codes the last day of behavioral testing as "-1", the
+# second to last day as "-2" and so on
+data_cb['day'] = ""
+data_cb_days = []
+
+for ele in list(set(subjects)):
+    data_cb_day = data_cb[(data_cb['subject']==ele)]
+    data_cb_day = data_cb_day.sort_values('date', ascending=True)
+    days_cb = np.arange(1, (len(data_cb_day.index)/2)+1, 0.5).astype(int)
+    data_cb_day['day'] = days_cb
+    data_cb_days.append(data_cb_day)
+
+# Add the day column, drop the date column and store data in a csv file
+data_cb = pd.concat(data_cb_days)
+data_cb = data_cb.drop(columns=['date'])
 data_cb.to_csv("./tidy_data_training_cb.csv", index = False)
